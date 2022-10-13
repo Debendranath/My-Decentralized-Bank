@@ -1,0 +1,526 @@
+<html>
+
+<head>
+    <title>Welcome to the Distributed Banking System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4-rc.1/web3.min.js"></script>
+    <!--<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" crossorigin="anonymous"></script>
+    -->
+    <style>
+        .button1 {
+            width:100%;
+            padding: 20px 0;
+            text-align: center;
+            background-color: rgb(241, 241, 247);
+			color: rgb(25, 25, 206);
+            position: relative;
+            align-items: center;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+
+        #div_userAccount {
+          width: 100%;
+          padding: 50px 0;
+          text-align: center;
+          background-color: rgb(182, 183, 235); 
+		  /* background-color: linear-gradient(to bottom left, #553c9a, #ee4b2b); */
+          margin-top: 10px;
+        }
+
+		input[type=text], input[type=number] {
+			width: 100%;
+			padding: 12px 20px;
+			margin: 8px 0;
+			display: inline-block;
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			box-sizing: border-box;
+		}
+
+		input[type=button] {
+			width: 100%;
+			background-color: #4CAF50;
+			color: white;
+			padding: 14px 20px;
+			margin: 8px 0;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			display: inline-block;
+		}
+
+		input[type=button]:hover {
+			background-color: #45a049;
+		}
+
+		div {
+			border-radius: 15px;
+			background-color: rgb(182, 183, 235); ;
+			padding: 20px;
+		}
+
+		table {
+			border-collapse: collapse;
+			width: 100%;
+		}
+
+		th{
+			text-align: left;
+			padding: 8px;
+			/* background-color: #9be27a; */
+			color: white;
+		}
+    </style>
+</head>
+
+<body>
+	<h1><center>Welcome to the Decentralized Banking System</center></h1>
+	<div id="div_userAccount" style="display: none">
+		<p id="userAddress"></p>
+		<p id="walletBalance"></p>
+	</div>
+    
+    <p id="display"></p>
+	<p id="bankBalance" style="display: none"></p>
+
+	<div id="div_openNewAcc" style="display: none">
+		<button id="openNewAcc" class="button1">Open a new Bank Account</button>
+	</div>
+
+	<div id="div_bankingOptions" style="display: none">
+		<h3><center>Options for e-Banking</center></h3>
+		<table id="bankingOptions">
+			<tr>
+				<th><button id="deposit" class="button1">Deposit</button></th>
+				<th><button id="withdraw" class="button1">Withdraw</button></th>
+				<th><button id="fundTransfer" class="button1">Fund Trasfer</button></th>
+				<th><button id="showBalance" class="button1">My Account Balance</button></th>
+			</tr>
+		</table>
+	</div>
+
+	<div id="div_form1" style="display: none">
+		<form id="form1">
+			<h3><center>Account Opening Form</center></h3>
+			<label for="form1_name">Enter Your Name: </label>
+			<input type="text" id="form1_name" placeholder="Type Your Full Name Here.." required>
+			<label for="form1_amount">Enter Initial Deposit Amount: </label>
+			<input type="number" min="1" id="form1_amount" placeholder="Deposit value > 0" required>	
+			<input type="button" id="form1_submit" value="Submit">
+		</form>
+	</div>
+
+	<div id="div_form2" style="display: none">
+		<form id="form2">
+			<h3><center>Deposit Form</center></h3>
+			<label for="form2_amount">Enter Amount to be Deposited: </label>
+			<input type="number" min="1" id="form2_amount" placeholder="0 < Deposit value < Wallet Balance" required>	
+			<table>
+				<tr>
+					<td><input type="button" id="form2_submit" value="Submit"></td>
+					<td><input type="button" id="form2_cancel" value="Cancel"></td>
+				</tr>
+			</table>
+		</form>
+	</div>
+
+	<div id="div_form3" style="display: none">
+		<form id="form3">
+			<h3><center>Withdraw Form</center></h3>
+			<label for="form3_amount">Enter Amount to be Withdrawn: </label>
+			<input type="number" min="1" id="form3_amount" placeholder="0 < Withdraw value < Bank Account Balance" required>	
+			<table>
+				<tr>
+					<td><input type="button" id="form3_submit" value="Submit"></td>
+					<td><input type="button" id="form3_cancel" value="Cancel"></td>
+				</tr>
+			</table>
+		</form>
+	</div>
+
+	<div id="div_form4" style="display: none">
+		<form id="form4">
+			<h3><center>Fund Transfer Form</center></h3>
+			<label for="form4_receiver">Enter Recipient's Address: </label>
+			<input type="text" id="form4_receiver" placeholder="Enter a valid Recipient's Address (in Hex)" required>
+			<label for="form4_amount">Enter Amount to be Transferred: </label>
+			<input type="number" min="1" id="form4_amount" placeholder="0 < Transferred Value < Sender's Bank Account Balance" required>	
+			<table>
+				<tr>
+					<td><input type="button" id="form4_submit" value="Submit"></td>
+					<td><input type="button" id="form4_cancel" value="Cancel"></td>
+				</tr>
+			</table>
+		</form>
+	</div>
+
+    <script>
+        var web3;
+        var account;
+        var accountAddress;
+        var accountBalanceWallet;
+        var accountBalanceBank;
+        var myBankContract;
+        const contractAddress = "0xf8ea1FE2A159b55399660B13A76B40a3169DDea4";
+        const abi = [
+	{
+		"inputs": [],
+		"name": "deposit",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "receiver",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "fundTransfer",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_name",
+				"type": "string"
+			}
+		],
+		"name": "openAccount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "withdraw",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getAccountNo",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getBalance",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getUserName",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "myAccountDetails",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "totalBankBalance",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "totalCustomer",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+        const walletConnect = window.onload = async function(){
+            web3 = new Web3(window.ethereum);
+            await window.ethereum.request({ method: "eth_requestAccounts" });
+            account = web3.eth.accounts;     //Get the current MetaMask selected/active wallet
+            accountAddress = account.givenProvider.selectedAddress;
+            //web3.eth.defaultAccount = accountAddress;
+        };
+        walletConnect().then(()=>{
+            document.getElementById("div_userAccount").style.display="block";
+            document.getElementById("userAddress").innerHTML="Your Public Address: <b>"+accountAddress+"</b>";
+			setInterval(function(){
+					web3.eth.getBalance(accountAddress).then((res) => {
+					accountBalanceWallet = web3.utils.fromWei(res,"ether");
+					document.getElementById("walletBalance").innerHTML = "Your MetaMask Wallet Balance: <b>"+accountBalanceWallet+" ETH<b>"; 
+					//localStorage.setItem("currentWalletBalance") = res;
+				});
+			},10);
+            console.log("Deployed Contract Address (Goeli Test Net): "+contractAddress);
+            console.log("Contract ABI: "+abi);
+            myBankContract = new web3.eth.Contract(abi,contractAddress);
+            //console.log(myBankContract);
+            
+            myBankContract.methods.getAccountNo().call({from: accountAddress}).then(function(res){
+                if(res == 0) //user doesn't have a bank account.
+                {
+                    document.getElementById("display").innerHTML = "<b>You don't have a Bank Account.</b><br><br>";
+                    document.getElementById("div_openNewAcc").style.display = "block";
+                }
+                else // user has a bank account.
+                {   
+                    myBankContract.methods.myAccountDetails().call({from: accountAddress}).then(function(res){
+                        console.log("Account Number: "+res[0]);
+                        console.log("Name: "+res[1]);
+                        console.log("Bank Account Balance: "+res[2]);
+                        document.getElementById("display").innerHTML = "Account No: <b>"+res[0]+"</b><br><br>Account Holder Name: <b>"+res[1]+"<b><br>";
+						document.getElementById("div_bankingOptions").style.display = "block";
+					});
+                }
+            });
+            
+            document.getElementById("openNewAcc").onclick = ()=>{
+                document.getElementById("div_form1").style.display = "block";
+            };
+
+            document.getElementById("form1_submit").onclick = ()=>{
+                const _name = document.getElementById("form1_name").value;
+                const _val = document.getElementById("form1_amount").value;
+				// const _max = localStorage.getItem("currentWalletBalance");
+                if(_name==null || _val==null || _val<0 )
+                {
+                    alert("Invalid Form!! Please Re-check.");
+                }
+                else
+                {
+                    console.log(_name);
+                    console.log(_val);
+                    myBankContract.methods.openAccount(_name).send({from: accountAddress,value: _val}).then(()=>{
+                        document.getElementById("display").innerHTML = "<b>Your bank account has been created successfully!!</b>";
+                        document.getElementById("div_form1").style.display = "none";                            
+						document.getElementById("div_openNewAcc").style.display = "none";
+                    });
+                    setTimeout(()=>{
+                        myBankContract.methods.myAccountDetails().call({from: accountAddress}).then(function(res){
+                            document.getElementById("display").innerHTML = "Account No: <b>"+res[0]+"</b><br><br>Account Holder Name: <b>"+res[1]+"<b><br>";    
+							document.getElementById("div_bankingOptions").style.display = "block";	
+						});                        
+                    },3000);
+                }    
+            };
+			
+			document.getElementById("showBalance").onclick = ()=>{
+				document.getElementById("bankBalance").style.display = "block";
+				document.getElementById("showBalance").style.display = "none";
+				setInterval(()=>{
+					myBankContract.methods.getBalance().call({from: accountAddress}).then(function(res){
+						document.getElementById("bankBalance").innerHTML = "Account Balance: <b>"+res+" Wei<b>";
+					});
+				},100);
+				setTimeout(()=>{
+					document.getElementById("bankBalance").style.display = "none";
+					document.getElementById("showBalance").style.display = "block";
+				},3000);	
+			};
+
+			document.getElementById("deposit").onclick = ()=>{
+                document.getElementById("div_form2").style.display = "block";
+				document.getElementById("div_bankingOptions").style.display = "none";
+            };
+
+			document.getElementById("form2_cancel").onclick = ()=>{
+				document.getElementById("div_form2").style.display = "none";
+				document.getElementById("div_bankingOptions").style.display = "block";
+			};
+
+			document.getElementById("form2_submit").onclick = ()=>{
+				const _val = document.getElementById("form2_amount").value;
+        	    if(_val<=0)
+                {
+                    alert("Invalid Amount !! Please Re-check.");
+                }
+				/* else if(_val>_max)
+				{
+					alert("Insufficient Metamask Wallet Balance, Max Limit Exceeded !! Please Re-check.");
+				} */
+                else
+                {
+					document.getElementById("div_form2").style.display = "none";
+					myBankContract.methods.deposit().send({from: accountAddress,value: _val}).then(()=>{
+						alert("Amount deposited successfully!! Please check your updated balance.");
+						document.getElementById("div_bankingOptions").style.display = "block";
+					});
+				}
+			};
+
+			document.getElementById("withdraw").onclick = ()=>{
+				document.getElementById("div_form3").style.display = "block";
+				document.getElementById("div_bankingOptions").style.display = "none";
+			};
+
+			document.getElementById("form3_cancel").onclick = ()=>{
+				document.getElementById("div_form3").style.display = "none";
+				document.getElementById("div_bankingOptions").style.display = "block";
+			};
+
+			document.getElementById("form3_submit").onclick = ()=>{
+				const _val = document.getElementById("form3_amount").value;
+				myBankContract.methods.getBalance().call({from: accountAddress}).then(function(res){
+					localStorage.setItem("currentBankBalance",res);
+				});
+				const _max = localStorage.getItem("currentBankBalance");
+				//console.log(_max);
+                if(_val<=0)
+                {
+                    alert("Invalid Amount !! Please Re-check.");
+                }
+                else if(_val>_max)
+				{
+					alert("Insufficient Bank Account Balance, Max Limit Exceeded !! Please Re-check.");
+				}
+				else
+                {
+					document.getElementById("div_form3").style.display = "none";
+					myBankContract.methods.withdraw(_val).send({from: accountAddress}).then(()=>{
+						alert("Amount withdrawn successfully!! Please check your updated balance.");
+						document.getElementById("div_bankingOptions").style.display = "block";
+					});
+				}
+			};
+
+			document.getElementById("fundTransfer").onclick = ()=>{
+				document.getElementById("div_form4").style.display = "block";
+				document.getElementById("div_bankingOptions").style.display = "none";
+			};
+
+			document.getElementById("form4_cancel").onclick = ()=>{
+				document.getElementById("div_form4").style.display = "none";
+				document.getElementById("div_bankingOptions").style.display = "block";
+			};
+
+			document.getElementById("form4_submit").onclick = ()=>{
+				const _val = document.getElementById("form4_amount").value;
+				const _addr = document.getElementById("form4_receiver").value;
+				myBankContract.methods.getBalance().call({from: accountAddress}).then(function(res){
+					localStorage.setItem("currentBalance",res);
+				});
+				const _max = localStorage.getItem("currentBalance");
+                if(_val<=0)
+                {
+                    alert("Invalid Amount !! Please Re-check.");
+                }
+                else if(_val>_max)
+				{
+					alert("Insufficient Bank Account Balance, Max Limit Exceeded !! Please Re-check.");
+				}
+				else
+                {
+					document.getElementById("div_form4").style.display = "none";
+					myBankContract.methods.fundTransfer(_addr,_val).send({from: accountAddress}).then(()=>{
+						alert("Amount transferred successfully!! Please check your updated balance.");
+						document.getElementById("div_bankingOptions").style.display = "block";
+					});
+				}
+			};
+
+        });
+        
+    </script>
+</body>
+
+</html>
